@@ -1,18 +1,22 @@
 pipeline {
-    agent any
+    agent {
+        docker {
+            image 'maven:3.9.2-eclipse-temurin-17'
+            args '-v $HOME/.m2:/root/.m2'
+        }
+    }
 
     environment {
-        DOCKERHUB_CREDENTIALS = credentials('dockerhub-credentials')  // Jenkins DockerHub credentials
-        DOCKER_IMAGE = "thedk/notes-app"                             // Your DockerHub repo
+        DOCKERHUB_CREDENTIALS = credentials('dockerhub-credentials')
+        DOCKER_IMAGE = "thedk/notes-app"
+        GIT_URL = "https://github.com/iamdk-16/springboot-notes-app.git"
+        GIT_BRANCH = "main"
     }
 
     stages {
         stage('Checkout Code') {
             steps {
-                // Replace 'github-credentials' with the Jenkins credentials ID you created for GitHub
-                git branch: 'main', 
-                    url: 'https://github.com/iamdk-16/springboot-notes-app.git',
-                    credentialsId: 'github-credentials'
+                git branch: "${GIT_BRANCH}", url: "${GIT_URL}", credentialsId: 'github-credentials'
             }
         }
 
