@@ -2,15 +2,19 @@ pipeline {
     agent {
         docker {
             image 'thedk/maven-docker:latest'
-            // mount local maven repo for caching dependencies
+            // Mount local maven repo for dependency caching
             args '-v /root/.m2:/root/.m2'
         }
+    }
+
+    environment {
+        IMAGE_NAME = "thedk/springboot-notes-app"
+        IMAGE_TAG  = "latest"
     }
 
     stages {
         stage('Checkout') {
             steps {
-                // get code from your repo
                 git branch: 'main',
                     url: 'https://github.com/iamdk-16/springboot-notes-app.git'
             }
@@ -31,17 +35,28 @@ pipeline {
         stage('Build Docker Image') {
             steps {
                 script {
-                    sh "docker build -t thedk/springboot-notes-app:latest ."
+                    docker.build("${IMAGE_NAME}:${IMAGE_TAG}")
                 }
             }
         }
 
         stage('Push Docker Image') {
-    steps {
-        script {
-            docker.withRegistry('https://index.docker.io/v1/', 'dockerhub-creds') {
-                docker.image('thedk/springboot-notes-app:latest').push()
+            steps {
+                script {
+                    docker.withRegistry('https://index.docker.io/v1/', 'dockerhub-credentials') {
+                        docker.image("${IMAGE_NAME}:${IMAGE_TAG}").push()
+                    }
+                }
             }
+        }
+    }
+
+    post {
+        success {
+            echo '✅ Build & Push successful!'
+        }
+        failure {
+            echo '❌ Pipeline failed. Check logs.'
         }
     }
 }
