@@ -1,0 +1,6 @@
+FROM maven:3.9.2-eclipse-temurin-17
+
+# Install Docker inside the Maven container
+RUN apt-get update && apt-get install -y docker.io \
+    && rm -rf /var/lib/apt/lists/*
+
