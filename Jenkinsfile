@@ -1,52 +1,50 @@
 pipeline {
     agent {
         docker {
-            image 'maven:3.9.2-eclipse-temurin-17'
-            args '-v $HOME/.m2:/root/.m2'
+            image 'thedk/maven-docker:latest'
+            // mount local maven repo for caching dependencies
+            args '-v /root/.m2:/root/.m2'
         }
-    }
-
-    environment {
-        DOCKERHUB_CREDENTIALS = credentials('dockerhub-credentials')
-        DOCKER_IMAGE = "thedk/notes-app"
-        GIT_URL = "https://github.com/iamdk-16/springboot-notes-app.git"
-        GIT_BRANCH = "main"
     }
 
     stages {
-        stage('Checkout Code') {
+        stage('Checkout') {
             steps {
-                git branch: "${GIT_BRANCH}", url: "${GIT_URL}", credentialsId: 'github-credentials'
+                // get code from your repo
+                git branch: 'main',
+                    url: 'https://github.com/your-username/springboot-notes-app.git'
             }
         }
 
-        stage('Build with Maven') {
+        stage('Build') {
             steps {
                 sh 'mvn clean package -DskipTests'
             }
         }
 
+        stage('Test') {
+            steps {
+                sh 'mvn test'
+            }
+        }
+
         stage('Build Docker Image') {
             steps {
-                sh 'docker build -t $DOCKER_IMAGE .'
+                script {
+                    sh "docker build -t thedk/springboot-notes-app:latest ."
+                }
             }
         }
 
         stage('Push Docker Image') {
             steps {
-                withDockerRegistry([ credentialsId: 'dockerhub-credentials', url: 'https://index.docker.io/v1/' ]) {
-                    sh 'docker push $DOCKER_IMAGE'
+                withCredentials([usernamePassword(credentialsId: 'dockerhub-creds',
+                                                 usernameVariable: 'DOCKER_USER',
+                                                 passwordVariable: 'DOCKER_PASS')]) {
+                    sh "echo $DOCKER_PASS | docker login -u $DOCKER_USER --password-stdin"
+                    sh "docker push thedk/springboot-notes-app:latest"
                 }
             }
-        }
-    }
-
-    post {
-        success {
-            echo "✅ Build and Docker push successful!"
-        }
-        failure {
-            echo "❌ Build failed. Check logs."
         }
     }
 }
